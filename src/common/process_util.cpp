@@ -29,12 +29,19 @@ pid_t spawn_child(const std::string& bin_path,
     // 子进程：独立进程组（pgid == 自身 pid），便于总控整组管理
     setpgid(0, 0);
 
-    // 策略 A：库路径前置注入，首个匹配胜出；外部固定 env 不受影响
+    // 策略 A：库路径前置注入，首个匹配胜出；外部固定 env 不受影响。
+    // Linux 用 LD_LIBRARY_PATH；macOS 开发机额外注入 DYLD_LIBRARY_PATH（SIP 允许时生效）。
+    // 部署验证以 Linux 为准。
     if (!lib_search_dir.empty()) {
       const char* cur = getenv("LD_LIBRARY_PATH");
       std::string value =
           (cur && *cur) ? (lib_search_dir + ":" + cur) : lib_search_dir;
       setenv("LD_LIBRARY_PATH", value.c_str(), 1);
+
+      const char* dcur = getenv("DYLD_LIBRARY_PATH");
+      std::string dvalue =
+          (dcur && *dcur) ? (lib_search_dir + ":" + dcur) : lib_search_dir;
+      setenv("DYLD_LIBRARY_PATH", dvalue.c_str(), 1);
     }
 
     std::vector<const char*> argv;
