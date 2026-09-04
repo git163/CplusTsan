@@ -1,0 +1,12 @@
+{
+  "watch_interval_ms": 1000,
+  "normal_bin_dir": "build/bin",
+  "tsan_bin_dir": "build-tsan/bin",
+  "normal_lib_dir": "build/lib",
+  "tsan_lib_dir": "build-tsan/lib",
+  "tsan_runner": "tsan/tsan-run.sh",
+  "components": [
+    { "key": "heartbeat-1", "name": "heartbeat", "variant": "tsan",   "args": ["--period-ms", "1000", "--instance", "1"] },
+    { "key": "heartbeat-2", "name": "heartbeat", "variant": "normal", "args": ["--period-ms", "1000", "--instance", "2"] }
+  ]
+}

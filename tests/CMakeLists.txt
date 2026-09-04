@@ -1,6 +1,5 @@
-# tests/CMakeLists.txt — unit test entry
-# 用 FetchContent 拉 GoogleTest，**无需系统安装 gtest**。
-# 适合 starter 项目。随项目成长，推荐拆成 tests/<module>/CMakeLists.txt 各模块独立。
+# tests/CMakeLists.txt — 单元测试
+# 用 FetchContent 拉 GoogleTest（**无需系统安装 gtest**）。随项目成长可拆成 tests/<module>/CMakeLists.txt。
 
 include(FetchContent)
 
@@ -18,12 +17,13 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 # 自动发现 tests/ 下所有 Test*.cpp（含子目录）
-# CONFIGURE_DEPENDS：新增测试文件后下次 build 自动重新 configure
 file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS "Test*.cpp")
 
 add_executable(unit_tests ${TEST_SOURCES})
-target_link_libraries(unit_tests PRIVATE GTest::gtest GTest::gtest_main)
+target_link_libraries(unit_tests PRIVATE GTest::gtest GTest::gtest_main common)
 target_include_directories(unit_tests PRIVATE ../src/include)
+# 抑制文件路径由 CMake 传给测试，避免依赖运行目录
+target_compile_definitions(unit_tests PRIVATE TSAN_SUPP_PATH="${CMAKE_SOURCE_DIR}/tsan/tsan.supp")
 
 # 让每个 TEST() 自动注册为 CTest 用例
 gtest_discover_tests(unit_tests)

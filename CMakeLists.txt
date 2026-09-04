@@ -5,30 +5,27 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# 默认使用 RelWithDebInfo：优化 + 保留调试符号
-# - 性能接近 Release
-# - 崩溃时仍能用 gdb/lldb 拿到符号和行号
-# - 真正发布时单独切到 Release 即可（-DCMAKE_BUILD_TYPE=Release）
+# 第一步 include TSan 集成模块：若 -DENABLE_TSAN=ON，会强制构建类型为 TSan 并把
+# 插桩 flag 注入全局 CMAKE_CXX_FLAGS，保证包括 FetchContent 依赖在内的所有 TU 都插桩。
+include(cmake/tsan.cmake)
+
+# 默认构建类型 RelWithDebInfo；开启 TSan 时该值已由 tsan.cmake 置为 "TSan"，此处分支跳过。
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)
 endif()
 
-# 调试信息：所有 build type 都保留 -g，便于事后排查
+# 所有 build type 保留调试信息（含 TSan 的 -O1 -g）
 add_compile_options(-g)
 
-# 源码与头文件
-# 注意：file(GLOB_RECURSE) 是 CMake 反模式——CMake 不会主动感知新增的 .cpp。
-# 缓解：CONFIGURE_DEPENDS 会在 build 时触发 cmake 重跑；如 build 已存在，
-#      新增 .cpp 后请先 `cmake --build build --target rebuild_cache`。
-# 项目成长后推荐：每个模块一个 CMakeLists.txt，用 add_subdirectory() 替代 GLOB。
-file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "src/*.cpp" "src/*.cc")
-file(GLOB_RECURSE PROJECT_HEADERS CONFIGURE_DEPENDS "src/include/*.h" "src/include/*.hpp")
+find_package(Threads REQUIRED)
 
-# 主目标
-add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
-target_include_directories(${PROJECT_NAME} PRIVATE src src/include)
+# 各模块：src=common 库，controller=总控，components=示例组件，bench=基准
+add_subdirectory(src)
+add_subdirectory(controller)
+add_subdirectory(components)
+add_subdirectory(bench)
 
-# 启用测试
+# 测试
 option(BUILD_TESTING "Build unit tests" ON)
 if(BUILD_TESTING)
     enable_testing()

@@ -1,0 +1,28 @@
+# TSan 抑制文件模板（ThreadSanitizer suppressions）
+#
+# 格式：每一行 <type>:<pattern>
+#   - type    抑制类型，见下方"可靠类型"。
+#   - pattern 匹配出问题函数名的子串；可加 ^（锚定到栈顶符号 || 匹配从该函数名开头）。
+#     注意：这是"包含式"子串匹配（非 glob），例如 race:foo 会命中名字含 foo 的所有函数。
+#   - 以 # 开头的行是注释；空行忽略。
+#
+# 可靠类型（各平台 gcc/clang TSan 均支持）：
+#   race      数据竞争报告
+#   deadlock  死锁报告
+#   thread    线程相关的运行时报告
+# 版本相关类型（依赖本地 runtime，需实证确认，见 tests/tsan/TestTsanSupp.cpp）：
+#   signal、mutex、atomic、vptr 等
+#
+# 用法：由 tsan/tsan-run.sh 自动注入（TSAN_OPTIONS=suppressions=<本文件>）。
+#
+# —— 以下为示例条目，按实际情况增删 ——
+
+# 屏蔽已知无碍的竞态：第三方库 / 特殊场景 / 一次性告警
+race:^my_ns::known_benign_function$
+race:some_third_party_lib_symbol
+
+# 死锁误报（例如确有超时兜底的场景）
+deadlock:^my_ns::timeout_guarded_lock$
+
+# 线程生命周期相关噪点（如析构竞态已知可忽略）
+thread:^my_ns::background_thread_dtor$
