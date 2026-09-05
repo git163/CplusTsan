@@ -3,6 +3,14 @@
 
 include(FetchContent)
 
+# 第三方库：仓库里只提交压缩包（third_party/googletest-1.14.0.tar.gz），configure 时
+# 自动解压到构建目录后用本地源码（离线、定版本）；压缩包缺失时才回退到网络拉取。
+if(EXISTS ${CMAKE_SOURCE_DIR}/third_party/googletest-1.14.0.tar.gz)
+    cplus_vendor_extract(${CMAKE_SOURCE_DIR}/third_party/googletest-1.14.0.tar.gz
+                         googletest-1.14.0 GTEST_SRC_DIR)
+    set(FETCHCONTENT_SOURCE_DIR_GOOGLETEST "${GTEST_SRC_DIR}" CACHE PATH "" FORCE)
+endif()
+
 FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
@@ -27,3 +35,10 @@ target_compile_definitions(unit_tests PRIVATE TSAN_SUPP_PATH="${CMAKE_SOURCE_DIR
 
 # 让每个 TEST() 自动注册为 CTest 用例
 gtest_discover_tests(unit_tests)
+
+# 集成场景/压力测试：真实拉起总控，触发 崩溃恢复/变体热切换/优雅退出 场景。
+# 前置：需先执行 scripts/build.sh（build-tsan.sh 可选，缺失时脚本自动跳过 tsan 场景）。
+if(UNIX)
+    add_test(NAME stress.controller COMMAND ${CMAKE_SOURCE_DIR}/scripts/stress-controller.sh)
+    set_tests_properties(stress.controller PROPERTIES LABELS "integration" TIMEOUT 90)
+endif()

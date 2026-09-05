@@ -3,6 +3,9 @@
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -42,4 +45,28 @@ TEST(ProcessUtil, SpawnMissingBinaryExits127) {
 TEST(ProcessUtil, KillGroupAlreadyGoneIsSuccess) {
   // 进程组不存在 → 视为成功（幂等）
   EXPECT_TRUE(cplus::proc::kill_group(999999, SIGTERM));
+}
+
+TEST(ProcessUtil, InjectsLibrarySearchDirIntoChildEnv) {
+  // 验证策略 A：subprocess 的 LD_LIBRARY_PATH 应以注入的库目录开头（首个匹配胜出）。
+  const auto out_path = std::filesystem::temp_directory_path() /
+                        ("lib_env_" + std::to_string(::getpid()) + ".txt");
+  const std::string cmd =
+      "printf '%s' \"$LD_LIBRARY_PATH\" > '" + out_path.string() + "'";
+
+  std::string err;
+  pid_t pid = cplus::proc::spawn_child("/bin/sh", {"-c", cmd}, "/opt/tsan-lib", false, "", err);
+  ASSERT_GT(pid, 0) << err;
+
+  int status = 0;
+  ASSERT_EQ(waitpid(pid, &status, 0), pid);
+  ASSERT_TRUE(WIFEXITED(status)) << "child did not exit normally";
+
+  std::ifstream ifs(out_path);
+  const std::string value((std::istreambuf_iterator<char>(ifs)),
+                          std::istreambuf_iterator<char>());
+  std::filesystem::remove(out_path);
+
+  // 子进程看到的 LD_LIBRARY_PATH 应以注入的库目录开头（可能带冒号，也可能正好是它本身）
+  EXPECT_TRUE(value.rfind("/opt/tsan-lib", 0) == 0) << "got LD_LIBRARY_PATH: " << value;
 }

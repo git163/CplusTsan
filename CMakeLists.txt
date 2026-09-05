@@ -9,6 +9,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # 插桩 flag 注入全局 CMAKE_CXX_FLAGS，保证包括 FetchContent 依赖在内的所有 TU 都插桩。
 include(cmake/tsan.cmake)
 
+# 第三方库离线打包支持（third_party/*.tar.gz 自动解压到构建目录）
+include(cmake/vendor.cmake)
+
 # 默认构建类型 RelWithDebInfo；开启 TSan 时该值已由 tsan.cmake 置为 "TSan"，此处分支跳过。
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)

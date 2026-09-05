@@ -16,6 +16,7 @@
 #include <shared_mutex>
 #include <thread>
 #include <vector>
+#include <utility>
 
 #include <sys/resource.h>
 #include <time.h>
@@ -81,7 +82,9 @@ int main(int argc, char* argv[]) {
 
   const auto wall1 = std::chrono::steady_clock::now();
   const double cpu1 = cpu_seconds();
-  volatile long sink_count = mutex_count + atomic_count.load(std::memory_order_relaxed);
+  // 工作量：限时窗口内完成的循环次数（atomic_count 每轮递增，多线程共用）
+  const long ops = atomic_count.load(std::memory_order_relaxed);
+  volatile long sink_count = mutex_count;
   (void)sink_count;
 
   const long wall_ms =
@@ -89,7 +92,7 @@ int main(int argc, char* argv[]) {
   const long cpu_ms = static_cast<long>((cpu1 - cpu0) * 1000.0);
 
   struct rusage ru;
-  std::getrusage(RUSAGE_SELF, &ru);
+  getrusage(RUSAGE_SELF, &ru);
 #ifdef __APPLE__
   const long rss_kb = ru.ru_maxrss / 1024;  // macOS 单位是字节
 #else
@@ -97,6 +100,6 @@ int main(int argc, char* argv[]) {
 #endif
 
   std::printf("bench threads=%d seconds=%d\n", nthreads, seconds);
-  std::printf("wall_ms=%ld cpu_ms=%ld rss_kb=%ld\n", wall_ms, cpu_ms, rss_kb);
+  std::printf("ops=%ld wall_ms=%ld cpu_ms=%ld rss_kb=%ld\n", ops, wall_ms, cpu_ms, rss_kb);
   return 0;
 }

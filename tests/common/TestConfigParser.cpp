@@ -36,7 +36,7 @@ TEST(ConfigParser, ParsesValidConfig) {
     "tsan_runner": "tsan/tsan-run.sh",
     "components": [
       { "key": "a-1", "name": "heartbeat", "variant": "tsan",   "args": ["--instance", "1"] },
-      { "key": "a-2", "name": "heartbeat", "variant": "normal" }
+      { "name": "heartbeat", "variant": "normal" }
     ]
   })";
   const auto path = write_temp_json(json);
